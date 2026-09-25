@@ -638,6 +638,11 @@ function MyOrders({ setOrderId, setView, setToast }) {
 
   useEffect(() => { load(); }, []);
 
+  useEffect(() => {
+    const refresh = setInterval(load, 10000);
+    return () => clearInterval(refresh);
+  }, []);
+
   return (
     <main className="content">
       <div className="page-title"><span className="eyebrow">HISTORY</span><h1>My Orders</h1></div>

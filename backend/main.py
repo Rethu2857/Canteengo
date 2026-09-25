@@ -85,6 +85,14 @@ def add_log(db, user, action, details=""):
 
 def expire_orders(db):
     now = datetime.utcnow()
+    cash_without_deadline = db.query(Order).filter(
+        Order.payment_method == "CASH",
+        Order.pickup_deadline == None,
+        Order.status.in_(["PENDING", "PREPARING", "READY"])
+    ).all()
+    for order in cash_without_deadline:
+        order.pickup_deadline = order.created_at + timedelta(minutes=CASH_ORDER_MINUTES)
+
     orders = db.query(Order).filter(
         Order.pickup_deadline != None,
         Order.pickup_deadline < now,
@@ -111,7 +119,7 @@ def expire_orders(db):
         add_log(db, order.user, action, details)
         changed = True
 
-    if changed:
+    if changed or cash_without_deadline:
         db.commit()
 
 
