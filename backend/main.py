@@ -416,6 +416,7 @@ def get_payment_qr(order_id: int, user=Depends(current_user), db: Session = Depe
         "order_id": order.id,
         "amount": order.total,
         "upi_id": upi_id,
+        "upi_url": upi_payload,
         "qr_data_url": f"data:image/png;base64,{encoded}"
     }
 

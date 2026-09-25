@@ -495,6 +495,7 @@ function DemoPayment({ orderId, onPaid }) {
         {payment && <>
           <img className="qr-img" src={payment.qr_data_url} alt="UPI payment QR code" />
           <p><b>Scan to pay {money(payment.amount)}</b><br />UPI ID: {payment.upi_id}</p>
+          <a className="secondary-btn full" href={payment.upi_url}>Open UPI app</a>
         </>}
         <input placeholder="Card number (demo)" defaultValue="4111 1111 1111 1111"/>
         <div className="two-col"><input placeholder="MM/YY" defaultValue="12/30"/><input placeholder="CVV" defaultValue="123"/></div>
