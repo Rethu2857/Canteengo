@@ -479,8 +479,8 @@ function DemoPayment({ orderId, onPaid }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    Promise.all([api.paymentQr(orderId), api.order(orderId)])
-      .then(([qr, order]) => setPayment({ ...qr, amount: order.total }))
+    api.paymentQr(orderId)
+      .then(setPayment)
       .catch(err => setError(err.message));
   }, [orderId]);
 
