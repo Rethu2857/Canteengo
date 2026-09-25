@@ -41,6 +41,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+CASH_ORDER_MINUTES = 15
 PICKUP_MINUTES = 20
 
 
@@ -85,21 +86,29 @@ def add_log(db, user, action, details=""):
 def expire_orders(db):
     now = datetime.utcnow()
     orders = db.query(Order).filter(
-        Order.status == "READY",
         Order.pickup_deadline != None,
-        Order.pickup_deadline < now
+        Order.pickup_deadline < now,
+        Order.status.in_(["PENDING", "PREPARING", "READY"])
     ).all()
 
     changed = False
     for order in orders:
-        order.status = "EXPIRED"
+        if order.payment_method == "CASH":
+            items = db.query(OrderItem).filter_by(order_id=order.id).all()
+            for item in items:
+                food = db.get(FoodItem, item.food_id)
+                if food:
+                    food.stock += item.quantity
+                    food.is_available = True
+            order.status = "CANCELLED"
+            action = "CASH_ORDER_CANCELLED"
+            details = f"Order #{order.id} cancelled after the 15-minute cash pickup window."
+        else:
+            order.status = "EXPIRED"
+            action = "ORDER_EXPIRED"
+            details = f"Order #{order.id} expired after 20 minutes."
         order.cancelled_at = now
-        add_log(
-            db,
-            order.user,
-            "ORDER_EXPIRED",
-            f"Order #{order.id} expired after 20 minutes."
-        )
+        add_log(db, order.user, action, details)
         changed = True
 
     if changed:
@@ -291,7 +300,11 @@ def create_order(
         payment_status="PENDING" if method == "CASH" else "PENDING",
         status="PENDING",
         pickup_token=secrets.token_urlsafe(24),
-        created_at=now
+        created_at=now,
+        pickup_deadline=(
+            now + timedelta(minutes=CASH_ORDER_MINUTES)
+            if method == "CASH" else None
+        )
     )
     db.add(order)
     db.flush()
@@ -463,6 +476,7 @@ def update_order_status(
     admin=Depends(require_admin),
     db: Session = Depends(get_db)
 ):
+    expire_orders(db)
     order = db.get(Order, order_id)
     if not order:
         raise HTTPException(404, "Order not found")
@@ -479,7 +493,10 @@ def update_order_status(
         if order.payment_method == "ONLINE" and order.payment_status != "PAID":
             raise HTTPException(400, "Online payment is not confirmed")
         order.ready_at = now
-        order.pickup_deadline = now + timedelta(minutes=PICKUP_MINUTES)
+        if order.payment_method == "CASH":
+            order.pickup_deadline = order.pickup_deadline or now + timedelta(minutes=CASH_ORDER_MINUTES)
+        else:
+            order.pickup_deadline = now + timedelta(minutes=PICKUP_MINUTES)
 
     if new_status == "COLLECTED":
         if order.status != "READY":

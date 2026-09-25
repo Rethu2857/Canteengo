@@ -512,6 +512,36 @@ function DemoPayment({ orderId, onPaid }) {
 }
 
 function ThankYou({ orderId, onQR, onOrders, onBill }) {
+  const [order, setOrder] = useState(null);
+  const [seconds, setSeconds] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const next = await api.order(orderId);
+        if (!active) return;
+        setOrder(next);
+        if (next.pickup_deadline) {
+          setSeconds(Math.max(0, Math.floor((new Date(next.pickup_deadline).getTime() - Date.now()) / 1000)));
+        }
+      } catch {}
+    };
+    load();
+    const refresh = setInterval(load, 10000);
+    return () => { active = false; clearInterval(refresh); };
+  }, [orderId]);
+
+  useEffect(() => {
+    if (seconds === null || seconds <= 0) return;
+    const timer = setInterval(() => setSeconds(value => Math.max(0, value - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [seconds]);
+
+  const cashTimer = order?.payment_method === "CASH" && seconds !== null
+    ? `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`
+    : null;
+
   return (
     <main className="center-page">
       <div className="success-card">
@@ -519,6 +549,8 @@ function ThankYou({ orderId, onQR, onOrders, onBill }) {
         <span className="eyebrow">ORDER CONFIRMED</span>
         <h1>Thank you! 🎉</h1>
         <p>Your order <b>#{orderId}</b> has been placed successfully.</p>
+        {cashTimer && <div className="timer-box"><Clock3/><div><small>Cash pickup deadline</small><b>{cashTimer}</b></div></div>}
+        {order?.payment_method === "CASH" && seconds === 0 && <div className="error-box">This cash order has passed its 15-minute pickup window and will be cancelled.</div>}
         <div className="thank-grid">
           <div><Clock3/><span>Wait for the canteen to mark it READY.</span></div>
           <div><QrCode/><span>Use your QR code when collecting.</span></div>
