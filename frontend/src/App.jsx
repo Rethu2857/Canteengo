@@ -28,7 +28,7 @@ const escapeHtml = (value) => String(value ?? "")
 async function downloadBill(orderId, setToast) {
   try {
     const order = await api.order(orderId);
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const user = JSON.parse(sessionStorage.getItem("user") || "{}");
     const rows = order.items.map(item => `
       <tr><td>${escapeHtml(item.name)}</td><td>${item.quantity}</td>
       <td>${money(item.unit_price)}</td><td>${money(item.unit_price * item.quantity)}</td></tr>
@@ -60,8 +60,8 @@ function App() {
   const [toast, setToast] = useState("");
 
   useEffect(() => {
-    const saved = localStorage.getItem("user");
-    const token = localStorage.getItem("token");
+    const saved = sessionStorage.getItem("user");
+    const token = sessionStorage.getItem("token");
     if (saved && token) {
       const u = JSON.parse(saved);
       setUser(u);
@@ -76,16 +76,16 @@ function App() {
   }, [toast]);
 
   const loginSuccess = (result) => {
-    localStorage.setItem("token", result.token);
-    localStorage.setItem("user", JSON.stringify(result.user));
+    sessionStorage.setItem("token", result.token);
+    sessionStorage.setItem("user", JSON.stringify(result.user));
     setUser(result.user);
     setView(result.user.role === "admin" ? "admin" : "home");
     setToast("Welcome back!");
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("user");
     setUser(null);
     setCart([]);
     setView("login");
@@ -541,22 +541,23 @@ function ThankYou({ orderId, onQR, onOrders, onBill }) {
   const cashTimer = order?.payment_method === "CASH" && seconds !== null
     ? `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`
     : null;
+  const cancelled = order?.status === "CANCELLED";
 
   return (
     <main className="center-page">
       <div className="success-card">
         <div className="success-icon"><CheckCircle2 size={50}/></div>
-        <span className="eyebrow">ORDER CONFIRMED</span>
-        <h1>Thank you! 🎉</h1>
-        <p>Your order <b>#{orderId}</b> has been placed successfully.</p>
-        {cashTimer && <div className="timer-box"><Clock3/><div><small>Cash pickup deadline</small><b>{cashTimer}</b></div></div>}
-        {order?.payment_method === "CASH" && seconds === 0 && <div className="error-box">This cash order has passed its 15-minute pickup window and will be cancelled.</div>}
-        <div className="thank-grid">
+        <span className="eyebrow">{cancelled ? "ORDER CANCELLED" : "ORDER CONFIRMED"}</span>
+        <h1>{cancelled ? "Order cancelled" : "Thank you! 🎉"}</h1>
+        <p>{cancelled ? <>Order <b>#{orderId}</b> was cancelled after the 15-minute cash pickup window.</> : <>Your order <b>#{orderId}</b> has been placed successfully.</>}</p>
+        {!cancelled && cashTimer && <div className="timer-box"><Clock3/><div><small>Cash pickup deadline</small><b>{cashTimer}</b></div></div>}
+        {!cancelled && order?.payment_method === "CASH" && seconds === 0 && <div className="error-box">This cash order has passed its 15-minute pickup window and is being cancelled.</div>}
+        {!cancelled && <div className="thank-grid">
           <div><Clock3/><span>Wait for the canteen to mark it READY.</span></div>
           <div><QrCode/><span>Use your QR code when collecting.</span></div>
           <div><ShieldCheck/><span>Once READY, you have 20 minutes to collect.</span></div>
-        </div>
-        <button className="primary-btn full" onClick={onQR}>View QR Code</button>
+        </div>}
+        {!cancelled && <button className="primary-btn full" onClick={onQR}>View QR Code</button>}
         <button className="secondary-btn full" onClick={onBill}><Download size={17}/> Download Bill</button>
         <button className="secondary-btn full" onClick={onOrders}>View My Orders</button>
       </div>

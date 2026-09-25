@@ -1,7 +1,7 @@
 const API = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 
 async function request(path, options = {}) {
-  const token = localStorage.getItem("token");
+  const token = sessionStorage.getItem("token");
   const headers = {
     "Content-Type": "application/json",
     ...(options.headers || {})
