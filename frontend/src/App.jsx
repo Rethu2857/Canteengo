@@ -8,7 +8,7 @@ import {
 import { api } from "./api";
 
 const money = (n) => `₹${Number(n).toFixed(0)}`;
-const API = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+const API = "https://canteengo-nine.vercel.app";
 
 const foodImage = (food) => {
   if (food.image_url) {

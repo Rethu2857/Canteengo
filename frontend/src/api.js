@@ -1,4 +1,4 @@
-const API = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
+const API = "https://canteengo-nine.vercel.app";
 
 async function request(path, options = {}) {
   const token = sessionStorage.getItem("token");
