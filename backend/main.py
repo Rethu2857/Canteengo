@@ -5,6 +5,7 @@ import base64
 import re
 from io import BytesIO
 from pathlib import Path
+from urllib.parse import urlencode
 
 import qrcode
 from fastapi import FastAPI, Depends, HTTPException
@@ -385,6 +386,36 @@ def get_order_qr(order_id: int, user=Depends(current_user), db: Session = Depend
         "order_id": order.id,
         "status": order.status,
         "token": order.pickup_token,
+        "qr_data_url": f"data:image/png;base64,{encoded}"
+    }
+
+
+@app.get("/orders/{order_id}/payment-qr")
+def get_payment_qr(order_id: int, user=Depends(current_user), db: Session = Depends(get_db)):
+    order = db.get(Order, order_id)
+
+    if not order or order.user_id != user.id:
+        raise HTTPException(404, "Order not found")
+    if order.payment_method != "ONLINE":
+        raise HTTPException(400, "This order uses cash at pickup")
+
+    upi_id = os.getenv("UPI_ID", "rethanyasri9@okaxis")
+    payee_name = os.getenv("UPI_PAYEE_NAME", "CanteenGo")
+    upi_payload = "upi://pay?" + urlencode({
+        "pa": upi_id,
+        "pn": payee_name,
+        "am": f"{order.total:.2f}",
+        "cu": "INR",
+        "tn": f"CanteenGo Order {order.id}"
+    })
+    buffer = BytesIO()
+    qrcode.make(upi_payload).save(buffer, format="PNG")
+    encoded = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
+    return {
+        "order_id": order.id,
+        "amount": order.total,
+        "upi_id": upi_id,
         "qr_data_url": f"data:image/png;base64,{encoded}"
     }
 

@@ -475,6 +475,15 @@ function Checkout({ cart, total, onOrder }) {
 
 function DemoPayment({ orderId, onPaid }) {
   const [processing, setProcessing] = useState(false);
+  const [payment, setPayment] = useState(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    Promise.all([api.paymentQr(orderId), api.order(orderId)])
+      .then(([qr, order]) => setPayment({ ...qr, amount: order.total }))
+      .catch(err => setError(err.message));
+  }, [orderId]);
+
   return (
     <main className="center-page">
       <div className="payment-card">
@@ -482,6 +491,11 @@ function DemoPayment({ orderId, onPaid }) {
         <span className="eyebrow">DEMO PAYMENT</span>
         <h1>Complete payment</h1>
         <p>Order #{orderId}</p>
+        {error && <div className="error-box">{error}</div>}
+        {payment && <>
+          <img className="qr-img" src={payment.qr_data_url} alt="UPI payment QR code" />
+          <p><b>Scan to pay {money(payment.amount)}</b><br />UPI ID: {payment.upi_id}</p>
+        </>}
         <input placeholder="Card number (demo)" defaultValue="4111 1111 1111 1111"/>
         <div className="two-col"><input placeholder="MM/YY" defaultValue="12/30"/><input placeholder="CVV" defaultValue="123"/></div>
         <button className="primary-btn full" disabled={processing} onClick={async () => {

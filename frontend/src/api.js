@@ -42,6 +42,7 @@ export const api = {
   myOrders: () => request("/orders/my"),
   order: (id) => request(`/orders/${id}`),
   qr: (id) => request(`/orders/${id}/qr`),
+  paymentQr: (id) => request(`/orders/${id}/payment-qr`),
 
   adminStats: () => request("/admin/stats"),
   adminOrders: () => request("/admin/orders"),
