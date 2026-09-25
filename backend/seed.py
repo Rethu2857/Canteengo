@@ -1,9 +1,9 @@
 import re
 from pathlib import Path
 
-from database import Base, engine, SessionLocal
-from models import User, FoodItem, DailyMenu
-from auth import hash_password
+from .database import Base, engine, SessionLocal
+from .models import User, FoodItem, DailyMenu
+from .auth import hash_password
 
 DATASET_DIR = Path(__file__).resolve().parent.parent / "datasets"
 

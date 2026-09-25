@@ -8,8 +8,8 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
-from database import get_db
-from models import User
+from .database import get_db
+from .models import User
 
 SECRET_KEY = "CHANGE_THIS_SECRET_BEFORE_DEPLOYMENT_2026"
 ALGORITHM = "HS256"

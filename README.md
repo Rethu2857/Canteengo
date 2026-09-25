@@ -39,13 +39,13 @@ admin123
 
 ## Backend
 
-Open PowerShell in the backend folder:
+Open PowerShell in the project folder:
 
     python -m venv venv
     .\venv\Scripts\activate
     pip install -r requirements.txt
-    python seed.py
-    python -m uvicorn main:app --reload
+    python -m backend.seed
+    python -m uvicorn backend.main:app --reload
 
 If PowerShell blocks uvicorn.exe, use the `python -m uvicorn` command above.
 

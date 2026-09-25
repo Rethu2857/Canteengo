@@ -13,13 +13,13 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 
-from database import Base, engine, get_db
-from models import User, FoodItem, Order, OrderItem, ActivityLog, DailyMenu
-from schemas import (
+from .database import Base, engine, get_db
+from .models import User, FoodItem, Order, OrderItem, ActivityLog, DailyMenu
+from .schemas import (
     LoginRequest, RegisterRequest, CreateOrderRequest, StatusRequest,
     FoodCreate, FoodUpdate, DailyMenuCreate, VerifyQRRequest
 )
-from auth import hash_password, verify_password, create_token, current_user, require_admin
+from .auth import hash_password, verify_password, create_token, current_user, require_admin
 
 Base.metadata.create_all(bind=engine)
 
