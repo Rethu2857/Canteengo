@@ -21,14 +21,20 @@ def create_database_engine(url):
 DATABASE_URL = configured_database_url or (
     "sqlite:////tmp/canteen.db" if os.getenv("VERCEL") else "sqlite:///./canteen.db"
 )
-engine = create_database_engine(DATABASE_URL)
+fallback_database_url = "sqlite:////tmp/canteen.db" if os.getenv("VERCEL") else "sqlite:///./canteen.db"
+
+try:
+    engine = create_database_engine(DATABASE_URL)
+except Exception:
+    DATABASE_URL = fallback_database_url
+    engine = create_database_engine(DATABASE_URL)
 
 if not DATABASE_URL.startswith("sqlite"):
     try:
         with engine.connect():
             pass
     except Exception:
-        DATABASE_URL = "sqlite:////tmp/canteen.db" if os.getenv("VERCEL") else "sqlite:///./canteen.db"
+        DATABASE_URL = fallback_database_url
         engine = create_database_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
