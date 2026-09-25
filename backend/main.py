@@ -22,6 +22,7 @@ from .schemas import (
 from .auth import hash_password, verify_password, create_token, current_user, require_admin
 
 Base.metadata.create_all(bind=engine)
+from . import seed as _seed
 
 DATASET_DIR = Path(__file__).resolve().parent.parent / "datasets"
 
