@@ -4,10 +4,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
 configured_database_url = (
-    os.getenv("DATABASE_URL")
+    os.getenv("POSTGRES_URL_NON_POOLING")
     or os.getenv("POSTGRES_URL")
     or os.getenv("POSTGRES_PRISMA_URL")
+    or os.getenv("DATABASE_URL")
 )
+if configured_database_url and configured_database_url.startswith("postgres://"):
+    configured_database_url = "postgresql://" + configured_database_url[len("postgres://"):]
 if os.getenv("VERCEL") and (
     not configured_database_url or configured_database_url.startswith("sqlite")
 ):
