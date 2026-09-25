@@ -74,3 +74,18 @@ For real college deployment, integrate a payment provider and verify the payment
 The 20-minute timer starts when the admin changes an order to READY. If the student does not collect it before the deadline, the backend marks it EXPIRED.
 
 The database is SQLite for easy development. For production, use PostgreSQL.
+
+## Deploying the frontend to Vercel
+
+Deploy the `frontend` folder as a Vercel project. Vercel will detect Vite automatically.
+Before deploying, add this project environment variable in Vercel:
+
+    VITE_API_URL=https://your-backend-domain.example.com
+
+The backend must be deployed separately to a service that supports FastAPI. On that
+service, set `CORS_ORIGINS` to your Vercel URL, for example:
+
+    CORS_ORIGINS=https://your-project.vercel.app
+
+Keep the trailing slash out of both URLs. For production data, configure PostgreSQL
+through `DATABASE_URL` before using the application with real users.

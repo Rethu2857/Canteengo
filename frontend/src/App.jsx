@@ -8,7 +8,7 @@ import {
 import { api } from "./api";
 
 const money = (n) => `₹${Number(n).toFixed(0)}`;
-const API = "http://127.0.0.1:8000";
+const API = (import.meta.env.VITE_API_URL || "http://127.0.0.1:8000").replace(/\/$/, "");
 
 const foodImage = (food) => {
   if (food.image_url) {

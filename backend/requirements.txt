@@ -4,3 +4,4 @@ sqlalchemy
 pydantic[email]
 python-jose[cryptography]
 qrcode[pil]
+psycopg2-binary
