@@ -3,7 +3,7 @@ import {
   Search, ShoppingBag, UserRound, LogOut, Plus, Minus,
   ChevronRight, Clock3, ShieldCheck, ClipboardList, Package,
   Boxes, FileText, Utensils, QrCode, CheckCircle2, XCircle,
-  LayoutDashboard, CalendarDays, RefreshCw, WalletCards
+  LayoutDashboard, CalendarDays, RefreshCw, WalletCards, Download
 } from "lucide-react";
 import { api } from "./api";
 
@@ -17,6 +17,39 @@ const foodImage = (food) => {
   const n = encodeURIComponent(food.name);
   return `https://images.unsplash.com/photo-1603133872878-684f208fb84b?auto=format&fit=crop&w=700&q=80&sig=${food.id}`;
 };
+
+const escapeHtml = (value) => String(value ?? "")
+  .replaceAll("&", "&amp;")
+  .replaceAll("<", "&lt;")
+  .replaceAll(">", "&gt;")
+  .replaceAll('"', "&quot;")
+  .replaceAll("'", "&#039;");
+
+async function downloadBill(orderId, setToast) {
+  try {
+    const order = await api.order(orderId);
+    const user = JSON.parse(localStorage.getItem("user") || "{}");
+    const rows = order.items.map(item => `
+      <tr><td>${escapeHtml(item.name)}</td><td>${item.quantity}</td>
+      <td>${money(item.unit_price)}</td><td>${money(item.unit_price * item.quantity)}</td></tr>
+    `).join("");
+    const bill = `<!doctype html><html><head><meta charset="utf-8"><title>Bill #${order.id}</title>
+      <style>body{font:16px Arial,sans-serif;max-width:720px;margin:40px auto;color:#20202a}h1{color:#ff4054}table{width:100%;border-collapse:collapse;margin:24px 0}th,td{padding:10px;border-bottom:1px solid #ddd;text-align:left}td:nth-child(n+2),th:nth-child(n+2){text-align:right}.total{font-size:20px;text-align:right;font-weight:bold}</style>
+      </head><body><h1>CanteenGo</h1><p>Smart College Canteen</p>
+      <p><b>Bill:</b> #${order.id}<br><b>Student:</b> ${escapeHtml(user.name)}<br><b>Email:</b> ${escapeHtml(user.email)}<br><b>Payment:</b> ${escapeHtml(order.payment_method)} (${escapeHtml(order.payment_status)})</p>
+      <table><thead><tr><th>Item</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody>${rows}</tbody></table>
+      <p class="total">Total: ${money(order.total)}</p><p>Thank you for ordering with CanteenGo.</p></body></html>`;
+    const blob = new Blob([bill], { type: "text/html" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `canteen-bill-${order.id}.html`;
+    link.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    setToast(err.message);
+  }
+}
 
 function App() {
   const [user, setUser] = useState(null);
@@ -100,11 +133,15 @@ function Toast({ text }) {
 }
 
 function Login({ role, setRole, onSuccess, setToast }) {
+  const [registering, setRegistering] = useState(false);
+  const [name, setName] = useState("");
+  const [collegeId, setCollegeId] = useState("");
   const [email, setEmail] = useState(role === "admin" ? "admin@college.edu" : "student@college.edu");
   const [password, setPassword] = useState(role === "admin" ? "admin123" : "student123");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
+    setRegistering(false);
     setEmail(role === "admin" ? "admin@college.edu" : "student@college.edu");
     setPassword(role === "admin" ? "admin123" : "student123");
   }, [role]);
@@ -113,7 +150,9 @@ function Login({ role, setRole, onSuccess, setToast }) {
     e.preventDefault();
     setLoading(true);
     try {
-      const result = await api.login({ email, password });
+      const result = registering
+        ? await api.register({ name, college_id: collegeId, email, password })
+        : await api.login({ email, password });
       if (result.user.role !== role) {
         throw new Error(`This account is not a ${role} account.`);
       }
@@ -151,6 +190,12 @@ function Login({ role, setRole, onSuccess, setToast }) {
         </div>
 
         <form onSubmit={submit}>
+          {registering && <>
+            <label>Full name</label>
+            <input value={name} onChange={e => setName(e.target.value)} required />
+            <label>College ID</label>
+            <input value={collegeId} onChange={e => setCollegeId(e.target.value)} required />
+          </>}
           <label>Email</label>
           <input value={email} onChange={e => setEmail(e.target.value)} />
 
@@ -158,14 +203,17 @@ function Login({ role, setRole, onSuccess, setToast }) {
           <input type="password" value={password} onChange={e => setPassword(e.target.value)} />
 
           <button className="primary-btn full" disabled={loading}>
-            {loading ? "Signing in..." : `Login as ${role}`}
+            {loading ? "Please wait..." : registering ? "Create student account" : `Login as ${role}`}
           </button>
         </form>
 
-        <div className="demo-box">
+        {role === "student" && <button className="secondary-btn full" onClick={() => setRegistering(value => !value)}>
+          {registering ? "Back to student login" : "Create a new student account"}
+        </button>}
+        {!registering && <div className="demo-box">
           <b>Demo account</b>
           <div>{role === "admin" ? "admin@college.edu / admin123" : "student@college.edu / student123"}</div>
-        </div>
+        </div>}
       </div>
     </div>
   );
@@ -327,12 +375,12 @@ function StudentApp({ user, view, setView, cart, setCart, orderId, setOrderId, l
       )}
 
       {view === "thankyou" && (
-        <ThankYou orderId={orderId} onQR={() => setView("qr")} onOrders={() => setView("orders")}/>
+        <ThankYou orderId={orderId} onQR={() => setView("qr")} onOrders={() => setView("orders")} onBill={() => downloadBill(orderId, setToast)}/>
       )}
 
       {view === "qr" && <QRPage orderId={orderId} onBack={() => setView("orders")}/>}
 
-      {view === "orders" && <MyOrders setOrderId={setOrderId} setView={setView}/>}
+      {view === "orders" && <MyOrders setOrderId={setOrderId} setView={setView} setToast={setToast}/>} 
 
       {view === "home" && cart.length > 0 && (
         <button className="floating-cart" onClick={() => nav("cart")}>
@@ -448,7 +496,7 @@ function DemoPayment({ orderId, onPaid }) {
   );
 }
 
-function ThankYou({ orderId, onQR, onOrders }) {
+function ThankYou({ orderId, onQR, onOrders, onBill }) {
   return (
     <main className="center-page">
       <div className="success-card">
@@ -462,6 +510,7 @@ function ThankYou({ orderId, onQR, onOrders }) {
           <div><ShieldCheck/><span>Once READY, you have 20 minutes to collect.</span></div>
         </div>
         <button className="primary-btn full" onClick={onQR}>View QR Code</button>
+        <button className="secondary-btn full" onClick={onBill}><Download size={17}/> Download Bill</button>
         <button className="secondary-btn full" onClick={onOrders}>View My Orders</button>
       </div>
     </main>
@@ -512,7 +561,7 @@ function QRPage({ orderId, onBack }) {
   );
 }
 
-function MyOrders({ setOrderId, setView }) {
+function MyOrders({ setOrderId, setView, setToast }) {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -533,6 +582,7 @@ function MyOrders({ setOrderId, setView }) {
               <div className="order-top"><b>Order #{o.id}</b><span className={`status ${o.status.toLowerCase()}`}>{o.status}</span></div>
               <div className="order-items">{o.items.map((x,i) => <span key={i}>{x.name} × {x.quantity}</span>)}</div>
               <div className="order-meta"><span>{o.payment_method} · {o.payment_status}</span><strong>{money(o.total)}</strong></div>
+              <button className="secondary-btn full" onClick={() => downloadBill(o.id, setToast)}> <Download size={17}/> Download Bill</button>
               {o.status !== "CANCELLED" && o.status !== "EXPIRED" && o.status !== "COLLECTED" &&
                 <button className="secondary-btn full" onClick={() => {setOrderId(o.id); setView("qr");}}>View QR</button>}
             </div>

@@ -181,6 +181,7 @@ def register(data: RegisterRequest, db: Session = Depends(get_db)):
             "id": user.id,
             "name": user.name,
             "email": user.email,
+            "college_id": user.college_id,
             "role": user.role
         }
     }
