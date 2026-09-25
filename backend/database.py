@@ -11,18 +11,25 @@ configured_database_url = (
 )
 if configured_database_url and configured_database_url.startswith("postgres://"):
     configured_database_url = "postgresql://" + configured_database_url[len("postgres://"):]
-if os.getenv("VERCEL") and (
-    not configured_database_url or configured_database_url.startswith("sqlite")
-):
-    DATABASE_URL = "sqlite:////tmp/canteen.db"
-else:
-    DATABASE_URL = configured_database_url or "sqlite:///./canteen.db"
+def create_database_engine(url):
+    options = {}
+    if url.startswith("sqlite"):
+        options["connect_args"] = {"check_same_thread": False}
+    return create_engine(url, **options)
 
-engine_options = {}
-if DATABASE_URL.startswith("sqlite"):
-    engine_options["connect_args"] = {"check_same_thread": False}
 
-engine = create_engine(DATABASE_URL, **engine_options)
+DATABASE_URL = configured_database_url or (
+    "sqlite:////tmp/canteen.db" if os.getenv("VERCEL") else "sqlite:///./canteen.db"
+)
+engine = create_database_engine(DATABASE_URL)
+
+if not DATABASE_URL.startswith("sqlite"):
+    try:
+        with engine.connect():
+            pass
+    except Exception:
+        DATABASE_URL = "sqlite:////tmp/canteen.db" if os.getenv("VERCEL") else "sqlite:///./canteen.db"
+        engine = create_database_engine(DATABASE_URL)
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 Base = declarative_base()
