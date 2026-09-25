@@ -30,7 +30,9 @@ app.mount("/dataset", StaticFiles(directory=str(DATASET_DIR)), name="dataset")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[origin.strip() for origin in os.getenv("CORS_ORIGINS", "").split(",") if origin.strip()],
+    allow_origins=[origin.strip() for origin in os.getenv(
+        "CORS_ORIGINS", "https://canteengo-1694.vercel.app"
+    ).split(",") if origin.strip()],
     allow_origin_regex=r"https?://(localhost|127\.0\.0\.1):(5173|5174|5175|4173|3000)",
     allow_credentials=True,
     allow_methods=["*"],
