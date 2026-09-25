@@ -564,6 +564,25 @@ function ThankYou({ orderId, onQR, onOrders, onBill }) {
   );
 }
 
+function OrderCountdown({ deadline, paymentMethod, status }) {
+  const [seconds, setSeconds] = useState(null);
+
+  useEffect(() => {
+    if (paymentMethod !== "CASH" || !deadline || ["CANCELLED", "COLLECTED", "EXPIRED"].includes(status)) {
+      setSeconds(null);
+      return undefined;
+    }
+    const update = () => setSeconds(Math.max(0, Math.floor((new Date(deadline).getTime() - Date.now()) / 1000)));
+    update();
+    const timer = setInterval(update, 1000);
+    return () => clearInterval(timer);
+  }, [deadline, paymentMethod, status]);
+
+  if (seconds === null) return null;
+  const timer = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+  return <div className="timer-box"><Clock3/><div><small>Cash pickup time left</small><b>{timer}</b></div></div>;
+}
+
 function QRPage({ orderId, onBack }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
@@ -629,6 +648,7 @@ function MyOrders({ setOrderId, setView, setToast }) {
               <div className="order-top"><b>Order #{o.id}</b><span className={`status ${o.status.toLowerCase()}`}>{o.status}</span></div>
               <div className="order-items">{o.items.map((x,i) => <span key={i}>{x.name} × {x.quantity}</span>)}</div>
               <div className="order-meta"><span>{o.payment_method} · {o.payment_status}</span><strong>{money(o.total)}</strong></div>
+              <OrderCountdown deadline={o.pickup_deadline} paymentMethod={o.payment_method} status={o.status}/>
               <button className="secondary-btn full" onClick={() => downloadBill(o.id, setToast)}> <Download size={17}/> Download Bill</button>
               {o.status !== "CANCELLED" && o.status !== "EXPIRED" && o.status !== "COLLECTED" &&
                 <button className="secondary-btn full" onClick={() => {setOrderId(o.id); setView("qr");}}>View QR</button>}
