@@ -3,7 +3,9 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./canteen.db")
+DATABASE_URL = os.getenv("DATABASE_URL") or (
+    "sqlite:////tmp/canteen.db" if os.getenv("VERCEL") else "sqlite:///./canteen.db"
+)
 
 engine_options = {}
 if DATABASE_URL.startswith("sqlite"):
